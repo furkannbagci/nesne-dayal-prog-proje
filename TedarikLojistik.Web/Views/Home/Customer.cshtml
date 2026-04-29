@@ -1,0 +1,155 @@
+@model TedarikLojistik.Web.Models.ViewModels.CustomerDashboardViewModel
+@{ ViewData["Title"] = "Müşteri Paneli"; }
+
+<section class="page-shell">
+    <div class="page-heading">
+        <div>
+            <p class="eyebrow">Müşteri Paneli</p>
+            <h1>Ürünler ve siparişlerim</h1>
+        </div>
+        <span class="soft-pill"><i class="bi bi-person-check"></i> @User.Identity?.Name</span>
+    </div>
+
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-success app-alert">@TempData["Message"]</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger app-alert">@TempData["Error"]</div>
+    }
+    @if (TempData["TrackingNo"] != null)
+    {
+        <div class="alert alert-dark app-alert">Kargo takip no: <b>@TempData["TrackingNo"]</b></div>
+    }
+    @if (TempData["StockWarning"] != null)
+    {
+        <div class="alert alert-warning app-alert">@TempData["StockWarning"]</div>
+    }
+
+    <div class="section-title">
+        <h2>Satın Al</h2>
+    </div>
+
+    <div class="product-grid">
+        @foreach (var product in Model.Products)
+        {
+            var assembly = product as TedarikLojistik.Web.Models.Entities.AssemblyProduct;
+            <article class="app-card product-card">
+                <div class="card-topline">
+                    <div>
+                        <h3>@product.Ad</h3>
+                        <p>@product.Fiyat.ToString("C") · @product.Aciklama</p>
+                    </div>
+                    <span class="stock-badge @(product.StokMiktari <= product.StokEsikDegeri ? "is-low" : "")">
+                        Stok @product.StokMiktari
+                    </span>
+                </div>
+                <div class="product-meta">
+                    <span>@(assembly == null ? "Basit Ürün" : "Montaj Ürün")</span>
+                    <span>@product.ToplamAgirlikHesapla().ToString("0.##") kg</span>
+                    <span>Eşik @product.StokEsikDegeri</span>
+                </div>
+
+                @if (assembly?.Bilesenler.Any() == true)
+                {
+                    <div class="component-list">
+                        @foreach (var component in assembly.Bilesenler)
+                        {
+                            <span>@component.Miktar x @component.Ad</span>
+                        }
+                    </div>
+                }
+
+                <form asp-action="CreateOrder" method="post" class="order-form">
+                    <input type="hidden" name="productId" value="@product.Id" />
+
+                    <label class="form-label">Ödeme yöntemi</label>
+                    <select name="paymentMethod" class="form-select">
+                        <option value="0">Kredi Kartı</option>
+                        <option value="1">Havale / EFT</option>
+                        <option value="2">Kripto Para</option>
+                    </select>
+
+                    <label class="form-label">Kargo firması</label>
+                    <select name="cargoCompany" class="form-select">
+                        <option value="0">Aras Kargo</option>
+                        <option value="1">Yurtiçi Kargo</option>
+                        <option value="2">Global Expres</option>
+                    </select>
+
+                    <div class="option-row">
+                        <label class="form-check">
+                            <input class="form-check-input" type="checkbox" name="isInsured" value="true">
+                            <span class="form-check-label">Sigortalı</span>
+                        </label>
+                        <label class="form-check">
+                            <input class="form-check-input" type="checkbox" name="isFragile" value="true">
+                            <span class="form-check-label">Kırılacak eşya</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100" @(product.StokMiktari <= 0 ? "disabled" : "")>
+                        <i class="bi bi-bag-check"></i> Sipariş Ver
+                    </button>
+                </form>
+            </article>
+        }
+    </div>
+
+    <div class="section-title mt-4">
+        <h2>Siparişlerim</h2>
+    </div>
+
+    <div class="app-card table-card">
+        <div class="table-responsive">
+            <table class="table app-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Sipariş</th>
+                        <th>Ürün</th>
+                        <th>Tutar</th>
+                        <th>Durum</th>
+                        <th class="text-end">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in Model.Orders)
+                    {
+                        var canCancel = order.Durum != TedarikLojistik.Web.Models.Enums.OrderStatus.Iptal
+                            && order.Durum != TedarikLojistik.Web.Models.Enums.OrderStatus.Iade
+                            && order.Durum != TedarikLojistik.Web.Models.Enums.OrderStatus.Kargoda
+                            && order.Durum != TedarikLojistik.Web.Models.Enums.OrderStatus.TeslimEdildi;
+                        var canReturn = order.Durum == TedarikLojistik.Web.Models.Enums.OrderStatus.Kargoda
+                            || order.Durum == TedarikLojistik.Web.Models.Enums.OrderStatus.TeslimEdildi;
+
+                        <tr>
+                            <td class="fw-semibold">@order.SiparisNo</td>
+                            <td>@string.Join(", ", order.Kalemler.Select(k => k.UrunAdi))</td>
+                            <td>@order.ToplamTutar.ToString("C")</td>
+                            <td><span class="status-chip status-@order.Durum">@order.Durum</span></td>
+                            <td class="text-end">
+                                <div class="action-row">
+                                    <form asp-action="CancelOrder" method="post">
+                                        <input type="hidden" name="orderId" value="@order.Id" />
+                                        <button class="btn btn-sm btn-outline-danger" type="submit" disabled="@(!canCancel)">İptal</button>
+                                    </form>
+                                    <form asp-action="ReturnOrder" method="post">
+                                        <input type="hidden" name="orderId" value="@order.Id" />
+                                        <button class="btn btn-sm btn-outline-dark" type="submit" disabled="@(!canReturn)">İade</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Orders.Any())
+                    {
+                        <tr>
+                            <td colspan="5" class="empty-state">Henüz siparişiniz yok.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>

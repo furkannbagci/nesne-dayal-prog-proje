@@ -1,0 +1,68 @@
+@model IEnumerable<TedarikLojistik.Web.Models.Entities.Product>
+@{ ViewData["Title"] = "Yönetim Paneli"; }
+
+<section class="page-shell">
+    <div class="page-heading">
+        <div>
+            <p class="eyebrow">Manager</p>
+            <h1>Stok yönetimi</h1>
+        </div>
+        <a class="btn btn-outline-primary" asp-controller="Home" asp-action="Logistics">
+            <i class="bi bi-list-check"></i> Tüm Siparişler
+        </a>
+    </div>
+
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-info app-alert">@TempData["Message"]</div>
+    }
+    @if (TempData["StockWarning"] != null)
+    {
+        <div class="alert alert-warning app-alert">@TempData["StockWarning"]</div>
+    }
+
+    <div class="product-grid">
+        @foreach (var product in Model)
+        {
+            var assembly = product as TedarikLojistik.Web.Models.Entities.AssemblyProduct;
+            <article class="app-card stock-card">
+                <div class="card-topline">
+                    <div>
+                        <h3>@product.Ad</h3>
+                        <p>@(assembly == null ? "Basit Ürün" : "Montaj Ürün") · Kritik eşik: @product.StokEsikDegeri</p>
+                    </div>
+                    <span class="stock-total">@product.StokMiktari</span>
+                </div>
+                @if (assembly?.Bilesenler.Any() == true)
+                {
+                    <div class="component-list">
+                        @foreach (var component in assembly.Bilesenler)
+                        {
+                            <span>@component.Miktar x @component.Ad</span>
+                        }
+                    </div>
+                }
+
+                <div class="stock-actions">
+                    <form asp-action="IncreaseStock" method="post">
+                        <input type="hidden" name="productId" value="@product.Id" />
+                        <div class="input-group">
+                            <span class="input-group-text">Artır</span>
+                            <input type="number" name="amount" value="1" min="1" class="form-control text-center" />
+                            <button class="btn btn-success" type="submit"><i class="bi bi-plus-lg"></i></button>
+                        </div>
+                    </form>
+
+                    <form asp-action="DecreaseStock" method="post">
+                        <input type="hidden" name="productId" value="@product.Id" />
+                        <div class="input-group">
+                            <span class="input-group-text">Azalt</span>
+                            <input type="number" name="amount" value="1" min="1" max="@product.StokMiktari" class="form-control text-center" />
+                            <button class="btn btn-outline-danger" type="submit" @(product.StokMiktari <= 0 ? "disabled" : "")><i class="bi bi-dash-lg"></i></button>
+                        </div>
+                    </form>
+                </div>
+            </article>
+        }
+    </div>
+</section>

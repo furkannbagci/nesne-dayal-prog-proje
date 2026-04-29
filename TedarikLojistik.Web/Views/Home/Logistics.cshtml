@@ -1,0 +1,95 @@
+@using TedarikLojistik.Web.Authorization
+@model IEnumerable<TedarikLojistik.Web.Models.Entities.Order>
+@{ ViewData["Title"] = "Lojistik Paneli"; }
+
+<section class="page-shell">
+    <div class="page-heading">
+        <div>
+            <p class="eyebrow">Operasyon</p>
+            <h1>Sipariş yönetimi</h1>
+        </div>
+        <span class="soft-pill"><i class="bi bi-truck"></i> @User.Identity?.Name</span>
+    </div>
+
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-success app-alert">@TempData["Message"]</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger app-alert">@TempData["Error"]</div>
+    }
+
+    <div class="app-card table-card">
+        <div class="table-responsive">
+            <table class="table app-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Sipariş</th>
+                        <th>Müşteri</th>
+                        <th>Ürün</th>
+                        <th>Tutar</th>
+                        <th>Ödeme</th>
+                        <th>Kargo</th>
+                        <th>Durum</th>
+                        <th class="text-end">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in Model)
+                    {
+                        var terminal = order.Durum == TedarikLojistik.Web.Models.Enums.OrderStatus.Iptal
+                            || order.Durum == TedarikLojistik.Web.Models.Enums.OrderStatus.Iade
+                            || order.Durum == TedarikLojistik.Web.Models.Enums.OrderStatus.TeslimEdildi;
+                        var canReturn = User.IsInRole(AppRoles.Admin)
+                            && (order.Durum == TedarikLojistik.Web.Models.Enums.OrderStatus.Kargoda
+                                || order.Durum == TedarikLojistik.Web.Models.Enums.OrderStatus.TeslimEdildi);
+                        var canCancel = User.IsInRole(AppRoles.Admin)
+                            && order.Durum != TedarikLojistik.Web.Models.Enums.OrderStatus.Iptal
+                            && order.Durum != TedarikLojistik.Web.Models.Enums.OrderStatus.Iade;
+
+                        <tr>
+                            <td class="fw-semibold">@order.SiparisNo</td>
+                            <td>@(order.AppUser?.Email ?? "-")</td>
+                            <td>@string.Join(", ", order.Kalemler.Select(k => k.UrunAdi))</td>
+                            <td>@order.ToplamTutar.ToString("C")</td>
+                            <td>
+                                <span class="status-chip @(order.OdemeTamamlandi ? "status-paid" : "status-wait")">
+                                    @(order.OdemeTamamlandi ? "Onaylı" : "Bekliyor")
+                                </span>
+                            </td>
+                            <td>@order.KargoFirmasi</td>
+                            <td><span class="status-chip status-@order.Durum">@order.Durum</span></td>
+                            <td class="text-end">
+                                <div class="action-row">
+                                    <form asp-action="NextState" method="post">
+                                        <input type="hidden" name="orderId" value="@order.Id" />
+                                        <button type="submit" class="btn btn-sm btn-outline-primary" disabled="@terminal">İlerle</button>
+                                    </form>
+
+                                    @if (User.IsInRole(AppRoles.Admin))
+                                    {
+                                        <form asp-action="ReturnOrder" method="post">
+                                            <input type="hidden" name="orderId" value="@order.Id" />
+                                            <button type="submit" class="btn btn-sm btn-outline-dark" disabled="@(!canReturn)">İade</button>
+                                        </form>
+                                        <form asp-action="CancelOrder" method="post">
+                                            <input type="hidden" name="orderId" value="@order.Id" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" disabled="@(!canCancel)">İptal</button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="empty-state">Henüz sipariş yok.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>

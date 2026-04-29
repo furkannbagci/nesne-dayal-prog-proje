@@ -1,0 +1,37 @@
+@{ ViewData["Title"] = "Sisteme Giriş"; }
+
+<section class="login-shell">
+    <div class="login-panel app-card">
+        <div class="login-brand">
+            <div class="brand-mark"><i class="bi bi-box-seam"></i></div>
+            <div>
+                <p class="eyebrow">Akıllı Lojistik</p>
+                <h1>Sisteme giriş</h1>
+            </div>
+        </div>
+
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger app-alert">@TempData["Error"]</div>
+        }
+
+        <form asp-action="Login" method="post" class="login-form">
+            <label class="form-label" for="email">E-posta</label>
+            <input id="email" name="email" type="email" class="form-control" placeholder="ornek@test.com" autocomplete="username" required />
+
+            <label class="form-label" for="password">Şifre</label>
+            <input id="password" name="password" type="password" class="form-control" placeholder="Şifreniz" autocomplete="current-password" required />
+
+            <button type="submit" class="btn btn-primary w-100">
+                <i class="bi bi-box-arrow-in-right"></i> Giriş Yap
+            </button>
+        </form>
+
+        <div class="demo-accounts">
+            <span>Test hesapları</span>
+            <code>admin@test.com / 123</code>
+            <code>personel@test.com / 123</code>
+            <code>musteri@test.com / 123</code>
+        </div>
+    </div>
+</section>
