@@ -10,10 +10,10 @@ public class GlobalExpresAdapter : IShippingAdapter
         return $"GLB-{Guid.NewGuid().ToString()[..8]}";
     }
 
-    public decimal CalculateBasePrice(Order order)
+    public decimal CalculateBasePrice(Order order, int distanceKm)
     {
         var weight = order.Kalemler.Sum(k => k.Product?.ToplamAgirlikHesapla() * k.Miktar ?? 0);
-        return Math.Max(90m, 70m + (decimal)weight * 14m);
+        return Math.Max(90m, 70m + (decimal)weight * 14m + distanceKm * 0.09m);
     }
 
     public string CheckStatus(string trackingNumber)

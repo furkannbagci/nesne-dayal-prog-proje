@@ -1,28 +1,36 @@
-@model IEnumerable<TedarikLojistik.Web.Models.Entities.Product>
-@{ ViewData["Title"] = "Yönetim Paneli"; }
+@using TedarikLojistik.Web.Authorization
+@model TedarikLojistik.Web.Models.ViewModels.StockDashboardViewModel
+@{ ViewData["Title"] = "Stok Paneli"; }
 
 <section class="page-shell">
     <div class="page-heading">
         <div>
-            <p class="eyebrow">Manager</p>
+            <p class="eyebrow">Stok Paneli</p>
             <h1>Stok yönetimi</h1>
         </div>
-        <a class="btn btn-outline-primary" asp-controller="Home" asp-action="Logistics">
-            <i class="bi bi-list-check"></i> Tüm Siparişler
-        </a>
     </div>
 
     @if (TempData["Message"] != null)
     {
         <div class="alert alert-info app-alert">@TempData["Message"]</div>
     }
-    @if (TempData["StockWarning"] != null)
+
+    @if (User.IsInRole(AppRoles.DepoGorevlisi) && Model.StockWarnings.Any())
     {
-        <div class="alert alert-warning app-alert">@TempData["StockWarning"]</div>
+        <div class="app-card notification-card">
+            <h2>Depo bildirimleri</h2>
+            @foreach (var warning in Model.StockWarnings)
+            {
+                <div class="notification-item">
+                    <strong>@warning.OlusturulmaTarihi.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</strong>
+                    <span>@warning.Mesaj</span>
+                </div>
+            }
+        </div>
     }
 
     <div class="product-grid">
-        @foreach (var product in Model)
+        @foreach (var product in Model.Products)
         {
             var assembly = product as TedarikLojistik.Web.Models.Entities.AssemblyProduct;
             <article class="app-card stock-card">

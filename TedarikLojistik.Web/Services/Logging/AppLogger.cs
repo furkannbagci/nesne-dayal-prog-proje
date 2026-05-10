@@ -12,6 +12,7 @@ namespace TedarikLojistik.Web.Services.Logging;
 /// </summary>
 public class AppLogger : IAppLogger
 {
+    // Lazy kullanımı sistem genelinde tek logger örneği oluşturur.
     private static readonly Lazy<AppLogger> _instance = new Lazy<AppLogger>(() => new AppLogger());
     
     // IServiceProvider, singleton içinde scope'lu DbContext kullanabilmek için gereklidir

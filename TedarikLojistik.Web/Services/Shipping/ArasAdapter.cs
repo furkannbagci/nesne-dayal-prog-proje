@@ -10,10 +10,10 @@ public class ArasAdapter : IShippingAdapter
         return $"ARS-{Guid.NewGuid().ToString()[..8]}";
     }
 
-    public decimal CalculateBasePrice(Order order)
+    public decimal CalculateBasePrice(Order order, int distanceKm)
     {
         var weight = order.Kalemler.Sum(k => k.Product?.ToplamAgirlikHesapla() * k.Miktar ?? 0);
-        return Math.Max(45m, 35m + (decimal)weight * 8m);
+        return Math.Max(45m, 35m + (decimal)weight * 8m + distanceKm * 0.06m);
     }
 
     public string CheckStatus(string trackingNumber)

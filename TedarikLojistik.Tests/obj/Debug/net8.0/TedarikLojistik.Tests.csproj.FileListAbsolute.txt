@@ -138,3 +138,4 @@ C:\Users\b_fur\OneDrive\Masaüstü\ndap proje\TedarikLojistik.Tests\bin\Debug\ne
 C:\Users\b_fur\OneDrive\Masaüstü\ndap proje\TedarikLojistik.Tests\bin\Debug\net8.0\TedarikLojistik.Web.exe
 C:\Users\b_fur\OneDrive\Masaüstü\ndap proje\TedarikLojistik.Tests\bin\Debug\net8.0\TedarikLojistik.Web.dll
 C:\Users\b_fur\OneDrive\Masaüstü\ndap proje\TedarikLojistik.Tests\bin\Debug\net8.0\TedarikLojistik.Web.pdb
+C:\Users\b_fur\OneDrive\Masaüstü\ndap proje\TedarikLojistik.Tests\obj\Debug\net8.0\TedarikLojistik.Tests.sourcelink.json

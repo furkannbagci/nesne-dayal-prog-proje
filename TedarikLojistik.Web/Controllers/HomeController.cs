@@ -18,6 +18,15 @@ namespace TedarikLojistik.Web.Controllers;
 [Authorize]
 public class HomeController : Controller
 {
+    private static readonly IReadOnlyList<DestinationOption> Destinations =
+    [
+        new("İstanbul", 30),
+        new("Ankara", 450),
+        new("İzmir", 480),
+        new("Antalya", 720),
+        new("Trabzon", 1060)
+    ];
+
     private readonly IGenericRepository<Product> _productRepo;
     private readonly IGenericRepository<Order> _orderRepo;
     private readonly IStockSubject _stockManager;
@@ -54,13 +63,16 @@ public class HomeController : Controller
         if (User.IsInRole(AppRoles.Admin))
             return RedirectToAction("Admin");
 
-        if (User.IsInRole(AppRoles.Personel))
+        if (User.IsInRole(AppRoles.DepoGorevlisi))
+            return RedirectToAction("Admin");
+
+        if (User.IsInRole(AppRoles.Kurye))
             return RedirectToAction("Logistics");
 
         return RedirectToAction("Customer");
     }
 
-    [Authorize(Roles = AppRoles.AdminOrMusteri)]
+    [Authorize(Roles = AppRoles.Musteri)]
     public async Task<IActionResult> Customer()
     {
         var products = await EnsureProductsAsync();
@@ -76,13 +88,14 @@ public class HomeController : Controller
         return View(new CustomerDashboardViewModel
         {
             Products = products,
-            Orders = orders
+            Orders = orders,
+            Destinations = Destinations
         });
     }
 
     [HttpPost]
-    [Authorize(Roles = AppRoles.AdminOrMusteri)]
-    public async Task<IActionResult> CreateOrder(int productId, PaymentMethod paymentMethod, CargoCompany cargoCompany, bool isFragile, bool isInsured)
+    [Authorize(Roles = AppRoles.Musteri)]
+    public async Task<IActionResult> CreateOrder(int productId, PaymentMethod paymentMethod, CargoCompany cargoCompany, string destinationCity, bool isFragile, bool isInsured)
     {
         var currentUser = await _userManager.GetUserAsync(User);
         if (currentUser == null) return Challenge();
@@ -96,11 +109,14 @@ public class HomeController : Controller
             return RedirectToAction("Customer");
         }
 
+        var destination = Destinations.FirstOrDefault(d => d.City == destinationCity) ?? Destinations[0];
+
         var order = new Order
         {
             SiparisNo = "ORD-" + Guid.NewGuid().ToString()[..4].ToUpper(),
             AppUserId = currentUser.Id,
-            TeslimatAdresi = "Müşteri Adresi",
+            TeslimatAdresi = $"{destination.City} - {destination.DistanceKm} km",
+            MesafeKm = destination.DistanceKm,
             Durum = OrderStatus.Beklemede,
             KargoFirmasi = cargoCompany,
             OdemeYontemi = paymentMethod
@@ -121,7 +137,8 @@ public class HomeController : Controller
         }
 
         var shippingAdapter = ShippingAdapterFactory.Create(cargoCompany);
-        IShippingCostCalculator calculator = new AdapterShippingCost(shippingAdapter);
+        // Firma adapterı ağırlık ve mesafeye göre temel kargo ücretini hesaplar.
+        IShippingCostCalculator calculator = new AdapterShippingCost(shippingAdapter, destination.DistanceKm);
         if (isInsured) calculator = new InsuranceDecorator(calculator);
         if (isFragile) calculator = new FragileDecorator(calculator);
 
@@ -140,14 +157,14 @@ public class HomeController : Controller
         _logger.LogInfo("Odeme", $"{order.SiparisNo} için {order.OdemeYontemi} ödemesi {(order.OdemeTamamlandi ? "onaylandı" : "onaylanamadı")}.", username, order.Id);
         if (product.StokEsikAltinda)
         {
-            TempData["StockWarning"] = $"{product.Ad} kritik stok seviyesine düştü. Satın Alma birimine e-posta, Depo sorumlusuna sistem bildirimi oluşturuldu.";
+            _logger.LogWarning("StokUyari", $"{product.Ad} kritik stok seviyesine düştü. Depo görevlisi paneline bildirim bırakıldı.", username, product.Id);
         }
 
         TempData["Message"] = $"Sipariş oluşturuldu. Toplam: {order.ToplamTutar:C}";
         return RedirectToAction("Customer");
     }
 
-    [Authorize(Roles = AppRoles.AdminOrPersonel)]
+    [Authorize(Roles = AppRoles.AdminOrKurye)]
     public async Task<IActionResult> Logistics()
     {
         var orders = await _context.Orders
@@ -160,7 +177,7 @@ public class HomeController : Controller
     }
 
     [HttpPost]
-    [Authorize(Roles = AppRoles.AdminOrPersonel)]
+    [Authorize(Roles = AppRoles.AdminOrKurye)]
     public async Task<IActionResult> NextState(int orderId)
     {
         var order = await _orderRepo.GetByIdAsync(orderId);
@@ -239,21 +256,34 @@ public class HomeController : Controller
         return RedirectAfterCustomerAction();
     }
 
-    [Authorize(Roles = AppRoles.Admin)]
+    [Authorize(Roles = AppRoles.AdminOrDepo)]
     public async Task<IActionResult> Admin()
     {
         var products = await EnsureProductsAsync();
-        return View(products);
+        var warnings = User.IsInRole(AppRoles.DepoGorevlisi)
+            ? await _context.SystemLogs
+                .Where(l => l.Kategori == "StokUyari")
+                .OrderByDescending(l => l.Id)
+                .Take(6)
+                .ToListAsync()
+            : [];
+
+        return View(new StockDashboardViewModel
+        {
+            Products = products,
+            StockWarnings = warnings
+        });
     }
 
     [HttpPost]
-    [Authorize(Roles = AppRoles.Admin)]
+    [Authorize(Roles = AppRoles.AdminOrDepo)]
     public async Task<IActionResult> DecreaseStock(int productId, int amount)
     {
         var product = await _productRepo.GetByIdAsync(productId);
         if (product != null && _stockManager is StockManager manager)
         {
             var oldStock = product.StokMiktari;
+            // Stok eşik altına düşerse Observer bildirimleri tetiklenir.
             manager.DecreaseStock(product, amount);
             _productRepo.Update(product);
             await _productRepo.SaveChangesAsync();
@@ -261,7 +291,7 @@ public class HomeController : Controller
             TempData["Message"] = $"{product.Ad} stoğu azaltıldı. Kalan: {product.StokMiktari}.";
             if (product.StokEsikAltinda)
             {
-                TempData["StockWarning"] = $"{product.Ad} kritik stok seviyesine düştü. Satın Alma birimine e-posta, Depo sorumlusuna sistem bildirimi oluşturuldu.";
+                _logger.LogWarning("StokUyari", $"{product.Ad} kritik stok seviyesine düştü. Depo görevlisi paneline bildirim bırakıldı.", User.Identity?.Name, product.Id);
             }
         }
 
@@ -269,7 +299,7 @@ public class HomeController : Controller
     }
 
     [HttpPost]
-    [Authorize(Roles = AppRoles.Admin)]
+    [Authorize(Roles = AppRoles.AdminOrDepo)]
     public async Task<IActionResult> IncreaseStock(int productId, int amount)
     {
         var product = await _productRepo.GetByIdAsync(productId);
@@ -292,8 +322,16 @@ public class HomeController : Controller
             .Include(p => ((AssemblyProduct)p).Bilesenler)
             .ToListAsync();
 
-        var names = products.Select(p => p.Ad).ToHashSet();
+        var removedNames = new[] { "Hafif Numune Paket", "Ağır Numune Paket" };
         var changed = false;
+        foreach (var removedProduct in products.Where(p => removedNames.Contains(p.Ad) && p.Aktif))
+        {
+            removedProduct.Aktif = false;
+            _productRepo.Update(removedProduct);
+            changed = true;
+        }
+
+        var names = products.Where(p => p.Aktif).Select(p => p.Ad).ToHashSet();
 
         if (!names.Contains("Kurşun Kalem"))
         {
@@ -352,6 +390,7 @@ public class HomeController : Controller
 
         return await _context.Products
             .Include(p => ((AssemblyProduct)p).Bilesenler)
+            .Where(p => p.Aktif)
             .ToListAsync();
     }
 
@@ -371,6 +410,7 @@ public class HomeController : Controller
 
     private void RestoreStock(Order order, string reason)
     {
+        // İptal ve iade sonrası ürünler depoya geri alınır.
         foreach (var item in order.Kalemler)
         {
             if (item.Product == null) continue;

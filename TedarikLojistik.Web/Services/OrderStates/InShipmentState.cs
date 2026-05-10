@@ -19,7 +19,7 @@ public class InShipmentState : IOrderState
 
     public void Return(Order order)
     {
-        order.Durum = OrderStatus.Iade;
+        throw new InvalidOperationException("Kargodaki sipariş iade edilemez. Teslim edildikten sonra iade alınabilir.");
     }
 
     public string GetStatusName() => "Kargoda";

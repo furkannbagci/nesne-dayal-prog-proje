@@ -1,4 +1,5 @@
 using TedarikLojistik.Web.Models.Enums;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TedarikLojistik.Web.Models.Entities;
 
@@ -34,6 +35,10 @@ public class Order : BaseEntity
 
     /// <summary>Teslimat adresi</summary>
     public string TeslimatAdresi { get; set; } = string.Empty;
+
+    /// <summary>Sipariş oluşturulurken kargo fiyatına etki eden mesafe. Veritabanında tutulmaz.</summary>
+    [NotMapped]
+    public int MesafeKm { get; set; }
 
     /// <summary>Tahmini teslimat tarihi</summary>
     public DateTime? TahminiTeslimatTarihi { get; set; }

@@ -31,6 +31,7 @@
                         <th>Tutar</th>
                         <th>Ödeme</th>
                         <th>Kargo</th>
+                        <th>Teslimat</th>
                         <th>Durum</th>
                         <th class="text-end">İşlem</th>
                     </tr>
@@ -42,8 +43,7 @@
                             || order.Durum == TedarikLojistik.Web.Models.Enums.OrderStatus.Iade
                             || order.Durum == TedarikLojistik.Web.Models.Enums.OrderStatus.TeslimEdildi;
                         var canReturn = User.IsInRole(AppRoles.Admin)
-                            && (order.Durum == TedarikLojistik.Web.Models.Enums.OrderStatus.Kargoda
-                                || order.Durum == TedarikLojistik.Web.Models.Enums.OrderStatus.TeslimEdildi);
+                            && order.Durum == TedarikLojistik.Web.Models.Enums.OrderStatus.TeslimEdildi;
                         var canCancel = User.IsInRole(AppRoles.Admin)
                             && order.Durum != TedarikLojistik.Web.Models.Enums.OrderStatus.Iptal
                             && order.Durum != TedarikLojistik.Web.Models.Enums.OrderStatus.Iade;
@@ -58,7 +58,8 @@
                                     @(order.OdemeTamamlandi ? "Onaylı" : "Bekliyor")
                                 </span>
                             </td>
-                            <td>@order.KargoFirmasi</td>
+                            <td>@order.KargoFirmasi<br /><small class="text-muted">@order.KargoUcreti.ToString("C")</small></td>
+                            <td>@order.TeslimatAdresi</td>
                             <td><span class="status-chip status-@order.Durum">@order.Durum</span></td>
                             <td class="text-end">
                                 <div class="action-row">
@@ -85,7 +86,7 @@
                     @if (!Model.Any())
                     {
                         <tr>
-                            <td colspan="8" class="empty-state">Henüz sipariş yok.</td>
+                            <td colspan="9" class="empty-state">Henüz sipariş yok.</td>
                         </tr>
                     }
                 </tbody>

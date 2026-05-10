@@ -22,11 +22,6 @@
     {
         <div class="alert alert-dark app-alert">Kargo takip no: <b>@TempData["TrackingNo"]</b></div>
     }
-    @if (TempData["StockWarning"] != null)
-    {
-        <div class="alert alert-warning app-alert">@TempData["StockWarning"]</div>
-    }
-
     <div class="section-title">
         <h2>Satın Al</h2>
     </div>
@@ -61,7 +56,9 @@
                     </div>
                 }
 
-                <form asp-action="CreateOrder" method="post" class="order-form">
+                <form asp-action="CreateOrder" method="post" class="order-form shipping-estimator"
+                      data-product-price="@product.Fiyat.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                      data-product-weight="@product.ToplamAgirlikHesapla().ToString(System.Globalization.CultureInfo.InvariantCulture)">
                     <input type="hidden" name="productId" value="@product.Id" />
 
                     <label class="form-label">Ödeme yöntemi</label>
@@ -72,21 +69,34 @@
                     </select>
 
                     <label class="form-label">Kargo firması</label>
-                    <select name="cargoCompany" class="form-select">
-                        <option value="0">Aras Kargo</option>
-                        <option value="1">Yurtiçi Kargo</option>
-                        <option value="2">Global Expres</option>
+                    <select name="cargoCompany" class="form-select cargo-select">
+                        <option value="0" data-base="35" data-kg="8" data-km="0.06" data-min="45">Aras Kargo</option>
+                        <option value="1" data-base="28" data-kg="9.5" data-km="0.05" data-min="50">Yurtiçi Kargo</option>
+                        <option value="2" data-base="70" data-kg="14" data-km="0.09" data-min="90">Global Expres</option>
+                    </select>
+
+                    <label class="form-label">Teslimat şehri / mesafe</label>
+                    <select name="destinationCity" class="form-select destination-select">
+                        @foreach (var destination in Model.Destinations)
+                        {
+                            <option value="@destination.City" data-distance="@destination.DistanceKm">@destination.City (@destination.DistanceKm km)</option>
+                        }
                     </select>
 
                     <div class="option-row">
                         <label class="form-check">
-                            <input class="form-check-input" type="checkbox" name="isInsured" value="true">
+                            <input class="form-check-input insured-check" type="checkbox" name="isInsured" value="true">
                             <span class="form-check-label">Sigortalı</span>
                         </label>
                         <label class="form-check">
-                            <input class="form-check-input" type="checkbox" name="isFragile" value="true">
+                            <input class="form-check-input fragile-check" type="checkbox" name="isFragile" value="true">
                             <span class="form-check-label">Kırılacak eşya</span>
                         </label>
+                    </div>
+
+                    <div class="price-preview">
+                        <span>Kargo: <strong class="shipping-price"></strong></span>
+                        <span>Toplam: <strong class="total-price"></strong></span>
                     </div>
 
                     <button type="submit" class="btn btn-primary w-100" @(product.StokMiktari <= 0 ? "disabled" : "")>
@@ -108,6 +118,8 @@
                     <tr>
                         <th>Sipariş</th>
                         <th>Ürün</th>
+                        <th>Teslimat</th>
+                        <th>Kargo</th>
                         <th>Tutar</th>
                         <th>Durum</th>
                         <th class="text-end">İşlem</th>
@@ -120,12 +132,13 @@
                             && order.Durum != TedarikLojistik.Web.Models.Enums.OrderStatus.Iade
                             && order.Durum != TedarikLojistik.Web.Models.Enums.OrderStatus.Kargoda
                             && order.Durum != TedarikLojistik.Web.Models.Enums.OrderStatus.TeslimEdildi;
-                        var canReturn = order.Durum == TedarikLojistik.Web.Models.Enums.OrderStatus.Kargoda
-                            || order.Durum == TedarikLojistik.Web.Models.Enums.OrderStatus.TeslimEdildi;
+                        var canReturn = order.Durum == TedarikLojistik.Web.Models.Enums.OrderStatus.TeslimEdildi;
 
                         <tr>
                             <td class="fw-semibold">@order.SiparisNo</td>
                             <td>@string.Join(", ", order.Kalemler.Select(k => k.UrunAdi))</td>
+                            <td>@order.TeslimatAdresi</td>
+                            <td>@order.KargoUcreti.ToString("C")</td>
                             <td>@order.ToplamTutar.ToString("C")</td>
                             <td><span class="status-chip status-@order.Durum">@order.Durum</span></td>
                             <td class="text-end">
@@ -145,7 +158,7 @@
                     @if (!Model.Orders.Any())
                     {
                         <tr>
-                            <td colspan="5" class="empty-state">Henüz siparişiniz yok.</td>
+                            <td colspan="7" class="empty-state">Henüz siparişiniz yok.</td>
                         </tr>
                     }
                 </tbody>
@@ -153,3 +166,38 @@
         </div>
     </div>
 </section>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('.shipping-estimator').forEach(form => {
+            const price = Number(form.dataset.productPrice);
+            const weight = Number(form.dataset.productWeight);
+            const cargo = form.querySelector('.cargo-select');
+            const destination = form.querySelector('.destination-select');
+            const insured = form.querySelector('.insured-check');
+            const fragile = form.querySelector('.fragile-check');
+            const shippingEl = form.querySelector('.shipping-price');
+            const totalEl = form.querySelector('.total-price');
+
+            const calculate = () => {
+                const selectedCargo = cargo.selectedOptions[0];
+                const selectedDestination = destination.selectedOptions[0];
+                const base = Number(selectedCargo.dataset.base);
+                const kg = Number(selectedCargo.dataset.kg);
+                const km = Number(selectedCargo.dataset.km);
+                const min = Number(selectedCargo.dataset.min);
+                const distance = Number(selectedDestination.dataset.distance);
+
+                let shipping = Math.max(min, base + weight * kg + distance * km);
+                if (insured.checked) shipping += price * 0.05;
+                if (fragile.checked) shipping += 30;
+
+                shippingEl.textContent = shipping.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' });
+                totalEl.textContent = (price + shipping).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' });
+            };
+
+            [cargo, destination, insured, fragile].forEach(input => input.addEventListener('change', calculate));
+            calculate();
+        });
+    </script>
+}

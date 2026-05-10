@@ -45,7 +45,10 @@ public class AccountController : Controller
                 if (await _userManager.IsInRoleAsync(user, AppRoles.Admin))
                     return RedirectToAction("Admin", "Home");
 
-                if (await _userManager.IsInRoleAsync(user, AppRoles.Personel))
+                if (await _userManager.IsInRoleAsync(user, AppRoles.DepoGorevlisi))
+                    return RedirectToAction("Admin", "Home");
+
+                if (await _userManager.IsInRoleAsync(user, AppRoles.Kurye))
                     return RedirectToAction("Logistics", "Home");
             }
             
@@ -55,6 +58,44 @@ public class AccountController : Controller
         _logger.LogWarning("Yetkilendirme", "Başarısız giriş denemesi.", email);
         TempData["Error"] = "Giriş başarısız. Lütfen veritabanının seed edildiğinden emin olun.";
         return View();
+    }
+
+    [HttpGet]
+    public IActionResult Register()
+    {
+        return View();
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Register(string email, string password, string fullName)
+    {
+        var existingUser = await _userManager.FindByEmailAsync(email);
+        if (existingUser != null)
+        {
+            TempData["Error"] = "Bu e-posta adresi zaten kayıtlı.";
+            return View();
+        }
+
+        // Yeni kayıtlar müşteri rolüyle başlar.
+        var user = new AppUser
+        {
+            UserName = email,
+            Email = email,
+            AdSoyad = fullName,
+            EmailConfirmed = true
+        };
+
+        var createResult = await _userManager.CreateAsync(user, password);
+        if (!createResult.Succeeded)
+        {
+            TempData["Error"] = string.Join(" ", createResult.Errors.Select(e => e.Description));
+            return View();
+        }
+
+        await _userManager.AddToRoleAsync(user, AppRoles.Musteri);
+        _logger.LogInfo("Yetkilendirme", "Yeni müşteri kaydı oluşturuldu.", email, user.Id);
+        TempData["Message"] = "Kayıt oluşturuldu. E-posta ve şifrenizle giriş yapabilirsiniz.";
+        return RedirectToAction("Login");
     }
 
     public async Task<IActionResult> Logout()

@@ -63,7 +63,7 @@ using (var scope = app.Services.CreateScope())
         context.Database.Migrate();
 
         // Rolleri Ekle
-        string[] roles = { AppRoles.Admin, AppRoles.Personel, AppRoles.Musteri };
+        string[] roles = { AppRoles.Admin, AppRoles.DepoGorevlisi, AppRoles.Kurye, AppRoles.Musteri };
         foreach (var role in roles)
         {
             if (!await roleManager.RoleExistsAsync(role))
@@ -80,11 +80,24 @@ using (var scope = app.Services.CreateScope())
             await userManager.AddToRoleAsync(adminUser, AppRoles.Admin);
         }
         
-        if (await userManager.FindByEmailAsync("personel@test.com") == null)
+        if (await userManager.FindByEmailAsync("depo@test.com") == null)
         {
-            var personelUser = new AppUser { UserName = "personel@test.com", Email = "personel@test.com", AdSoyad = "Operasyon Personeli", EmailConfirmed = true };
-            await userManager.CreateAsync(personelUser, "123");
-            await userManager.AddToRoleAsync(personelUser, AppRoles.Personel);
+            var depoUser = new AppUser { UserName = "depo@test.com", Email = "depo@test.com", AdSoyad = "Depo Görevlisi", Rol = TedarikLojistik.Web.Models.Enums.UserRole.DepoGorevlisi, EmailConfirmed = true };
+            await userManager.CreateAsync(depoUser, "123");
+            await userManager.AddToRoleAsync(depoUser, AppRoles.DepoGorevlisi);
+        }
+
+        if (await userManager.FindByEmailAsync("kurye@test.com") == null)
+        {
+            var kuryeUser = new AppUser { UserName = "kurye@test.com", Email = "kurye@test.com", AdSoyad = "Kurye", Rol = TedarikLojistik.Web.Models.Enums.UserRole.Kurye, EmailConfirmed = true };
+            await userManager.CreateAsync(kuryeUser, "123");
+            await userManager.AddToRoleAsync(kuryeUser, AppRoles.Kurye);
+        }
+
+        var oldPersonel = await userManager.FindByEmailAsync("personel@test.com");
+        if (oldPersonel != null && !await userManager.IsInRoleAsync(oldPersonel, AppRoles.Kurye))
+        {
+            await userManager.AddToRoleAsync(oldPersonel, AppRoles.Kurye);
         }
 
         if (await userManager.FindByEmailAsync("musteri@test.com") == null)

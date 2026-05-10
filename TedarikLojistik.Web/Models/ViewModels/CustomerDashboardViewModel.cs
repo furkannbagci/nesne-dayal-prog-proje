@@ -6,4 +6,7 @@ public class CustomerDashboardViewModel
 {
     public IEnumerable<Product> Products { get; set; } = Enumerable.Empty<Product>();
     public IEnumerable<Order> Orders { get; set; } = Enumerable.Empty<Order>();
+    public IEnumerable<DestinationOption> Destinations { get; set; } = Enumerable.Empty<DestinationOption>();
 }
+
+public record DestinationOption(string City, int DistanceKm);

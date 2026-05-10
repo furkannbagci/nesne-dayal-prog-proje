@@ -10,10 +10,10 @@ public class YurticiAdapter : IShippingAdapter
         return $"YRT-{Guid.NewGuid().ToString()[..8]}";
     }
 
-    public decimal CalculateBasePrice(Order order)
+    public decimal CalculateBasePrice(Order order, int distanceKm)
     {
         var weight = order.Kalemler.Sum(k => k.Product?.ToplamAgirlikHesapla() * k.Miktar ?? 0);
-        return Math.Max(50m, 28m + (decimal)weight * 9.5m);
+        return Math.Max(50m, 28m + (decimal)weight * 9.5m + distanceKm * 0.05m);
     }
 
     public string CheckStatus(string trackingNumber)

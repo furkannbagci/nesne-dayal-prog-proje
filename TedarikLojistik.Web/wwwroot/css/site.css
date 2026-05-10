@@ -344,6 +344,58 @@ h3 {
   border-top: 1px solid var(--line);
 }
 
+.auth-link {
+  margin-top: .9rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.auth-link a {
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.price-preview {
+  display: flex;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .65rem .75rem;
+  border: 1px solid var(--line);
+  border-radius: .6rem;
+  background: var(--soft);
+  color: var(--muted);
+  font-weight: 750;
+}
+
+.price-preview strong {
+  color: var(--ink);
+}
+
+.notification-card {
+  display: grid;
+  gap: .65rem;
+  padding: 1rem;
+}
+
+.notification-card h2 {
+  font-size: 1rem;
+  font-weight: 850;
+}
+
+.notification-item {
+  display: grid;
+  gap: .15rem;
+  padding: .65rem .75rem;
+  border: 1px solid var(--line);
+  border-radius: .6rem;
+  background: #fff9eb;
+}
+
+.notification-item strong {
+  color: var(--warning);
+  font-size: .82rem;
+}
+
 .demo-accounts span,
 .login-note {
   color: var(--muted);

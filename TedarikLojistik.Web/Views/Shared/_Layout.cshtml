@@ -30,21 +30,21 @@
                     <ul class="navbar-nav main-nav">
                         @if (SignInManager.IsSignedIn(User))
                         {
-                            @if (User.IsInRole(AppRoles.Musteri) || User.IsInRole(AppRoles.Admin))
+                            @if (User.IsInRole(AppRoles.Musteri))
                             {
                                 <li class="nav-item">
                                     <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Customer"><i class="bi bi-bag"></i> Müşteri</a>
                                 </li>
                             }
 
-                            @if (User.IsInRole(AppRoles.Personel) || User.IsInRole(AppRoles.Admin))
+                            @if (User.IsInRole(AppRoles.Kurye) || User.IsInRole(AppRoles.Admin))
                             {
                                 <li class="nav-item">
                                     <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Logistics"><i class="bi bi-truck"></i> Lojistik</a>
                                 </li>
                             }
 
-                            @if (User.IsInRole(AppRoles.Admin))
+                            @if (User.IsInRole(AppRoles.DepoGorevlisi) || User.IsInRole(AppRoles.Admin))
                             {
                                 <li class="nav-item">
                                     <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Admin"><i class="bi bi-sliders"></i> Stok</a>

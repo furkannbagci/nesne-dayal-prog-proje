@@ -53,9 +53,20 @@ public class PatternTests
     }
 
     [Fact]
-    public void OrderState_InShipment_Can_Be_Returned()
+    public void OrderState_InShipment_Cannot_Be_Returned()
     {
         var order = new Order { Durum = OrderStatus.Kargoda };
+        var state = OrderStateFactory.GetState(order.Durum);
+
+        var exception = Assert.Throws<InvalidOperationException>(() => state.Return(order));
+
+        Assert.Contains("Kargodaki sipariş iade edilemez", exception.Message);
+    }
+
+    [Fact]
+    public void OrderState_Delivered_Can_Be_Returned()
+    {
+        var order = new Order { Durum = OrderStatus.TeslimEdildi };
         var state = OrderStateFactory.GetState(order.Durum);
 
         state.Return(order);
