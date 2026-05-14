@@ -3,9 +3,12 @@ using Microsoft.EntityFrameworkCore;
 using TedarikLojistik.Web.Models.Entities;
 using TedarikLojistik.Web.Interfaces.Patterns;
 using TedarikLojistik.Web.Interfaces.Repositories;
+using TedarikLojistik.Web.Interfaces.Services;
 using TedarikLojistik.Web.Data;
 using TedarikLojistik.Web.Data.Repositories;
 using TedarikLojistik.Web.Services.Logging;
+using TedarikLojistik.Web.Services.Orders;
+using TedarikLojistik.Web.Services.Products;
 using TedarikLojistik.Web.Services.Stock;
 using TedarikLojistik.Web.Authorization;
 
@@ -36,6 +39,8 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 // Bağımlılık Enjeksiyonu (DI) - Repositories
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+builder.Services.AddScoped<IProductCatalogService, ProductCatalogService>(); // Urun listeleme ve demo urunleri
+builder.Services.AddScoped<IOrderPricingService, OrderPricingService>();     // Kargo fiyat/takip hesaplama
 
 // Bağımlılık Enjeksiyonu (DI) - Design Patterns & Services
 builder.Services.AddSingleton<IAppLogger>(AppLogger.Instance); // Singleton Pattern
